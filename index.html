@@ -233,13 +233,12 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        /* 学习卡片 */
+        /* 学习卡片 - 固定布局 */
         .learn-container {
             position: relative;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             padding: 20px;
             padding-top: 80px; /* 为顶部留出空间 */
         }
@@ -250,24 +249,24 @@
             padding: 40px;
             color: white;
             text-align: center;
-            min-height: 400px;
-            flex: 1;
-            max-height: 60vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
             cursor: pointer;
             transition: transform 0.3s;
             position: relative;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
+            /* 固定高度，确保布局稳定 */
+            flex: 1;
+            min-height: 400px;
+            max-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .word-card:active {
             transform: scale(0.98);
         }
 
-        /* 斩按钮 */
+        /* 斩按钮 - 添加点击反馈 */
         .slash-btn {
             position: absolute;
             top: 20px;
@@ -278,7 +277,7 @@
             height: 50px;
             border-radius: 50%;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -287,15 +286,13 @@
 
         .slash-btn:active {
             background: rgba(255, 67, 54, 0.8);
+            transform: scale(0.9);
         }
 
-        /* 固定按钮区域 */
+        /* 固定按钮区域 - 保持稳定位置 */
         .fixed-actions {
             flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
+            padding: 0 20px 20px 20px;
         }
 
         .word {
@@ -349,7 +346,7 @@
         .card-actions {
             display: flex;
             gap: 15px;
-            margin-top: 30px;
+            margin-bottom: 15px;
         }
 
         .action-btn {
@@ -365,6 +362,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            height: 50px; /* 固定高度 */
         }
 
         .btn-familiar {
@@ -390,6 +388,9 @@
         .btn-undo {
             background: #718096;
             color: white;
+            width: 100%;
+            height: 50px; /* 固定高度，与其他按钮一致 */
+            margin: 0;
         }
 
         .btn-undo:hover {
@@ -603,6 +604,7 @@
 
             .learn-container {
                 padding: 10px;
+                padding-top: 80px;
             }
         }
     </style>
@@ -610,6 +612,12 @@
 <body>
     <div class="container" id="mainContainer">
         <div class="header-trigger" id="headerTrigger" style="display: none;"></div>
+        
+        <!-- 学习模式控制栏 -->
+        <div class="learning-controls" id="learningControls">
+            <button class="back-btn" onclick="backToMain()">返回主页</button>
+            <div class="learning-info" id="learningInfo">学习模式</div>
+        </div>
         
         <div class="header" id="header">
             <h1>📚 单词记忆卡片</h1>
@@ -702,17 +710,17 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // 音效（Base64编码）
+        // 更明显的音效（Base64编码）
         const sounds = {
-            slash: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGGm7A7OadSwkOUqzn77VdGAU6k9n1ynkpBSiA0fjblD0H',
-            familiar: 'data:audio/wav;base64,UklGRjwCAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRgCAADu/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/vz/bQvtDev+7f7t/u3+7f6ZEUcwRzATD+z+7P7s/uz+7P7s/uz+7P7s/uwL6/4dJlk9WT0cJur+6v7q/ur+6v7q/ur+6v7q/ur+FRt7SIlQiVB7SBMb5/7o/uj+6P7o/uj+hj2EWYVY',
-            unfamiliar: 'data:audio/wav;base64,UklGRl4CAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YToCAAAAAAAAAAAAAAAAAADD/+P+w/7j/sP+4/7D/uP+AAAAAAAAAAAAAAAABwEHAQcBBwH+/wAAAAAAAAAAAAAA+v8cBBECHAT6//r/+v8AAAAAAAAAAAAAAOz+PAw8DOz+7P7s/uz+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+            slash: 'data:audio/wav;base64,UklGRl4BAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTogAAAAw/7j/sP+4/7D/uP+w/7j/sP+4/7D/uP+w/7j/sP+4/7D/uP+AAAAAAAAAAAAAAAABwEHAQcBBwH+/wAAAAAAAAAAAAAA+v8cBBECHAT6//r/+v8AAAAAAAAAAAAAAOz+PAw8DOz+7P7s/uz+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            familiar: 'data:audio/wav;base64,UklGRpQBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YXABAADu/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/vz/bQvtDev+7f7t/u3+7f6ZEUcwRzATD+z+7P7s/uz+7P7s/uz+7P7s/uwL6/4dJlk9WT0cJur+6v7q/ur+6v7q/ur+6v7q/ur+FRt7SIlQiVB7SBMb5/7o/uj+6P7o/uj+hj2EWYVY',
+            unfamiliar: 'data:audio/wav;base64,UklGRmgBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUQBAADu/u7+7v7u/vz/bQvtDev+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+7f7t/u3+AAAAAAAAAAAAAAAA'
         };
 
         // 播放音效
         function playSound(type) {
             const audio = new Audio(sounds[type]);
-            audio.volume = 0.5;
+            audio.volume = 0.8; // 增加音量
             audio.play().catch(() => {});
         }
 
@@ -726,7 +734,11 @@
                 groupSize: 20
             },
             dailyGroup: null, // 今日学习的组
-            dailyDate: null   // 记录日期
+            dailyDate: null,   // 记录日期
+            learningPosition: { // 保存学习位置
+                groupId: null,
+                wordIndex: 0
+            }
         };
 
         // 当前学习状态
@@ -753,16 +765,28 @@
             if (!isInLearningMode) return;
             
             headerVisible = !headerVisible;
-            const header = document.getElementById('header');
-            const stats = document.getElementById('stats');
+            const controls = document.getElementById('learningControls');
             
             if (headerVisible) {
-                header.classList.remove('hidden');
-                stats.classList.remove('hidden');
+                controls.classList.add('visible');
             } else {
-                header.classList.add('hidden');
-                stats.classList.add('hidden');
+                controls.classList.remove('visible');
             }
+        }
+
+        // 返回主页
+        function backToMain() {
+            // 保存当前学习位置
+            if (currentGroup) {
+                wordData.learningPosition = {
+                    groupId: currentGroup.group.id,
+                    wordIndex: currentWordIndex
+                };
+                saveData();
+            }
+            
+            exitLearningMode();
+            switchTab('learn');
         }
 
         // 进入学习模式
@@ -793,6 +817,7 @@
             const header = document.getElementById('header');
             const stats = document.getElementById('stats');
             const trigger = document.getElementById('headerTrigger');
+            const controls = document.getElementById('learningControls');
             
             container.classList.remove('learning-mode');
             mainContent.classList.remove('fullscreen');
@@ -800,6 +825,7 @@
             header.classList.remove('hidden');
             stats.classList.remove('hidden');
             trigger.style.display = 'none';
+            controls.classList.remove('visible');
         }
 
         // 更新日期显示
@@ -813,7 +839,7 @@
         function loadData() {
             const saved = localStorage.getItem('wordMemoryData');
             if (saved) {
-                wordData = JSON.parse(saved);
+                wordData = Object.assign(wordData, JSON.parse(saved));
             }
         }
 
@@ -941,6 +967,7 @@
             if (wordData.dailyDate !== today) {
                 wordData.dailyDate = today;
                 wordData.dailyGroup = null;
+                wordData.learningPosition = { groupId: null, wordIndex: 0 };
             }
             
             // 如果已经有今日组，继续使用
@@ -951,6 +978,10 @@
                         group: group,
                         schedule: wordData.dailyGroup.schedule
                     };
+                    // 恢复学习位置
+                    if (wordData.learningPosition.groupId === group.id) {
+                        currentWordIndex = wordData.learningPosition.wordIndex;
+                    }
                     return;
                 }
             }
@@ -967,6 +998,12 @@
                             groupId: group.id,
                             schedule: schedule
                         };
+                        // 重置学习位置
+                        wordData.learningPosition = {
+                            groupId: group.id,
+                            wordIndex: 0
+                        };
+                        currentWordIndex = 0;
                         saveData();
                         return;
                     }
@@ -1002,6 +1039,7 @@
                 currentGroup.schedule.completed = true;
                 group.currentRound = (group.currentRound || 1) + 1;
                 wordData.dailyGroup = null; // 清除今日组
+                wordData.learningPosition = { groupId: null, wordIndex: 0 }; // 重置位置
                 saveData();
                 showAchievement(group);
                 return;
@@ -1034,19 +1072,21 @@
                             ${currentWordIndex + 1} / ${words.length}
                         </div>
                     </div>
-                    <div class="card-actions">
-                        <button class="action-btn btn-familiar" onclick="markAsFamiliar()">
-                            ✓ 熟悉
-                        </button>
-                        <button class="action-btn btn-unfamiliar" onclick="markAsUnfamiliar()">
-                            ✗ 不熟悉
-                        </button>
+                    <div class="fixed-actions">
+                        <div class="card-actions">
+                            <button class="action-btn btn-familiar" onclick="markAsFamiliar()">
+                                ✓ 熟悉
+                            </button>
+                            <button class="action-btn btn-unfamiliar" onclick="markAsUnfamiliar()">
+                                ✗ 不熟悉
+                            </button>
+                        </div>
+                        ${wordData.lastUndone ? `
+                            <button class="action-btn btn-undo" onclick="undoLastAction()">
+                                ↶ 撤销上次操作
+                            </button>
+                        ` : ''}
                     </div>
-                    ${wordData.lastUndone ? `
-                        <button class="action-btn btn-undo" style="width: 100%; margin-top: 10px;" onclick="undoLastAction()">
-                            ↶ 撤销上次操作
-                        </button>
-                    ` : ''}
                 </div>
             `;
             
@@ -1067,7 +1107,7 @@
                         <div class="achievement-icon">🏆</div>
                         <div class="achievement-title">太棒了！</div>
                         <div class="achievement-desc">
-                            又勤奋又聪明的你<br>
+                            勤奋又聪明的你<br>
                             完成了第${groupNumber}组的第${round}次复习！
                         </div>
                         <button class="achievement-btn" onclick="closeAchievement()">
@@ -1171,7 +1211,7 @@
         function markAsUnfamiliar() {
             wordData.lastUndone = null; // 清除撤销信息
             playSound('unfamiliar');
-            showToast('继续加油！');
+            // 移除"继续加油"提示
             nextWord();
         }
 
@@ -1186,6 +1226,13 @@
                 currentWordIndex = 0;
             }
             
+            // 保存学习位置
+            wordData.learningPosition = {
+                groupId: group.id,
+                wordIndex: currentWordIndex
+            };
+            saveData();
+            
             renderLearnSection();
         }
 
@@ -1199,6 +1246,13 @@
                         word.mastered = false;
                         currentWordIndex = wordData.lastUndone.wordIndex; // 恢复到撤销的位置
                         wordData.lastUndone = null;
+                        
+                        // 更新学习位置
+                        wordData.learningPosition = {
+                            groupId: group.id,
+                            wordIndex: currentWordIndex
+                        };
+                        
                         saveData();
                         updateStats();
                         renderLearnSection();
@@ -1326,7 +1380,11 @@
                         groupSize: 20
                     },
                     dailyGroup: null,
-                    dailyDate: null
+                    dailyDate: null,
+                    learningPosition: {
+                        groupId: null,
+                        wordIndex: 0
+                    }
                 };
                 currentGroup = null;
                 currentWordIndex = 0;
