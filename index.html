@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>单词记忆卡片</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* 学习模式的特殊样式 */
+        .container.learning-mode {
+            padding: 0;
+            max-width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .header.hidden {
+            transform: translateY(-150%);
+            opacity: 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stats.hidden {
+            transform: translateY(-150%);
+            opacity: 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            min-height: 400px;
+            transition: all 0.3s ease;
+        }
+
+        .main-content.fullscreen {
+            border-radius: 0;
+            min-height: 100vh;
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        /* 顶部触发区域和控制栏 */
+        .header-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            z-index: 100;
+            background: transparent;
+        }
+
+        .learning-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transform: translateY(-100%);
+            transition: transform 0.3s;
+            z-index: 101;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .learning-controls.visible {
+            transform: translateY(0);
+        }
+
+        .back-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .learning-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #f5f5f5;
+            padding: 5px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-container.hidden {
+            display: none;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 上传区域 */
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f5f0ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+        }
+
+        .upload-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 学习卡片 */
+        .learn-container {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            padding-top: 80px; /* 为顶部留出空间 */
+        }
+
+        .word-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            text-align: center;
+            min-height: 400px;
+            flex: 1;
+            max-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+            position: relative;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .word-card:active {
+            transform: scale(0.98);
+        }
+
+        /* 斩按钮 */
+        .slash-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .slash-btn:active {
+            background: rgba(255, 67, 54, 0.8);
+        }
+
+        /* 固定按钮区域 */
+        .fixed-actions {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .word {
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .phonetic {
+            font-size: 24px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            font-family: 'Times New Roman', serif;
+        }
+
+        .meaning {
+            font-size: 20px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            line-height: 1.6;
+        }
+
+        .meaning.hidden {
+            display: none;
+        }
+
+        .audio-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .audio-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-familiar {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-familiar:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+
+        .btn-unfamiliar {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-unfamiliar:hover {
+            background: #e53e3e;
+            transform: translateY(-2px);
+        }
+
+        .btn-undo {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-undo:hover {
+            background: #4a5568;
+        }
+
+        /* 成就页面 */
+        .achievement-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.5s;
+        }
+
+        .achievement-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            margin: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: bounceIn 0.6s;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .achievement-icon {
+            font-size: 72px;
+            margin-bottom: 20px;
+        }
+
+        .achievement-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .achievement-desc {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .achievement-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .achievement-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 设置区域 */
+        .setting-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .group-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .group-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .group-info {
+            flex: 1;
+        }
+
+        .group-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .group-meta {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .group-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            display: none;
+            animation: slideUp 0.3s;
+            z-index: 1000;
+        }
+
+        @keyframes slideUp {
+            from { transform: translate(-50%, 100%); }
+            to { transform: translate(-50%, 0); }
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        /* 卡片进度指示器 */
+        .card-progress {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .word {
+                font-size: 32px;
+            }
+            
+            .phonetic {
+                font-size: 20px;
+            }
+            
+            .meaning {
+                font-size: 18px;
+            }
+
+            .learn-container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="mainContainer">
+        <div class="header-trigger" id="headerTrigger" style="display: none;"></div>
+        
+        <div class="header" id="header">
+            <h1>📚 单词记忆卡片</h1>
+            <div id="currentDate"></div>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalWords">0</div>
+                <div class="stat-label">总单词数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="todayWords">0</div>
+                <div class="stat-label">今日待学</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="masteredWords">0</div>
+                <div class="stat-label">已掌握</div>
+            </div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="tab-container" id="tabContainer">
+                <button class="tab active" onclick="switchTab('learn')">学习</button>
+                <button class="tab" onclick="switchTab('upload')">上传</button>
+                <button class="tab" onclick="switchTab('manage')">管理</button>
+            </div>
+
+            <!-- 学习界面 -->
+            <div id="learn" class="section active">
+                <div id="learnContent"></div>
+            </div>
+
+            <!-- 上传界面 -->
+            <div id="upload" class="section">
+                <div class="upload-area">
+                    <div class="empty-icon">📄</div>
+                    <p>上传Excel文件（.xlsx或.xls）</p>
+                    <p style="font-size: 12px; color: #999; margin-top: 10px;">
+                        格式：第一列单词，第二列音标，第三列释义
+                    </p>
+                    <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        选择文件
+                    </button>
+                </div>
+
+                <div class="setting-item" style="margin-top: 20px;">
+                    <label class="setting-label">每组单词数量</label>
+                    <input type="number" id="groupSize" class="setting-input" value="20" min="5" max="100">
+                </div>
+
+                <button class="upload-btn" style="width: 100%; margin-top: 20px;" onclick="processUpload()">
+                    处理并分组
+                </button>
+            </div>
+
+            <!-- 管理界面 -->
+            <div id="manage" class="section">
+                <div class="setting-item">
+                    <div class="group-name">学习进度</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                        <span id="progressText">0 / 0 已掌握</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="group-name">单词组列表</div>
+                    <div class="group-list" id="groupList"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="group-name">被斩掉的单词</div>
+                    <div id="slashedWords" style="margin-top: 10px; color: #666; font-size: 14px;">
+                        暂无被斩掉的单词
+                    </div>
+                </div>
+
+                <button class="btn-unfamiliar" style="width: 100%; margin-top: 20px;" onclick="clearAllData()">
+                    清除所有数据
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // 音效（Base64编码）
+        const sounds = {
+            slash: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGGm7A7OadSwkOUqzn77VdGAU6k9n1ynkpBSiA0fjblD0H',
+            familiar: 'data:audio/wav;base64,UklGRjwCAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRgCAADu/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/u7+7v7u/vz/bQvtDev+7f7t/u3+7f6ZEUcwRzATD+z+7P7s/uz+7P7s/uz+7P7s/uwL6/4dJlk9WT0cJur+6v7q/ur+6v7q/ur+6v7q/ur+FRt7SIlQiVB7SBMb5/7o/uj+6P7o/uj+hj2EWYVY',
+            unfamiliar: 'data:audio/wav;base64,UklGRl4CAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YToCAAAAAAAAAAAAAAAAAADD/+P+w/7j/sP+4/7D/uP+AAAAAAAAAAAAAAAABwEHAQcBBwH+/wAAAAAAAAAAAAAA+v8cBBECHAT6//r/+v8AAAAAAAAAAAAAAOz+PAw8DOz+7P7s/uz+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        };
+
+        // 播放音效
+        function playSound(type) {
+            const audio = new Audio(sounds[type]);
+            audio.volume = 0.5;
+            audio.play().catch(() => {});
+        }
+
+        // 数据结构
+        let wordData = {
+            groups: [],
+            progress: {},
+            lastUndone: null,
+            slashedWords: [], // 被斩掉的单词
+            settings: {
+                groupSize: 20
+            },
+            dailyGroup: null, // 今日学习的组
+            dailyDate: null   // 记录日期
+        };
+
+        // 当前学习状态
+        let currentGroup = null;
+        let currentWordIndex = 0;
+        let isInLearningMode = false;
+        let headerVisible = false;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            updateDate();
+            updateStats();
+            checkDailyGroup();
+            renderLearnSection();
+            renderGroupList();
+            
+            // 设置顶部触发区域事件
+            document.getElementById('headerTrigger').addEventListener('click', toggleHeader);
+        });
+
+        // 切换顶部显示
+        function toggleHeader() {
+            if (!isInLearningMode) return;
+            
+            headerVisible = !headerVisible;
+            const header = document.getElementById('header');
+            const stats = document.getElementById('stats');
+            
+            if (headerVisible) {
+                header.classList.remove('hidden');
+                stats.classList.remove('hidden');
+            } else {
+                header.classList.add('hidden');
+                stats.classList.add('hidden');
+            }
+        }
+
+        // 进入学习模式
+        function enterLearningMode() {
+            isInLearningMode = true;
+            const container = document.getElementById('mainContainer');
+            const mainContent = document.getElementById('mainContent');
+            const tabContainer = document.getElementById('tabContainer');
+            const header = document.getElementById('header');
+            const stats = document.getElementById('stats');
+            const trigger = document.getElementById('headerTrigger');
+            
+            container.classList.add('learning-mode');
+            mainContent.classList.add('fullscreen');
+            tabContainer.classList.add('hidden');
+            header.classList.add('hidden');
+            stats.classList.add('hidden');
+            trigger.style.display = 'block';
+            headerVisible = false;
+        }
+
+        // 退出学习模式
+        function exitLearningMode() {
+            isInLearningMode = false;
+            const container = document.getElementById('mainContainer');
+            const mainContent = document.getElementById('mainContent');
+            const tabContainer = document.getElementById('tabContainer');
+            const header = document.getElementById('header');
+            const stats = document.getElementById('stats');
+            const trigger = document.getElementById('headerTrigger');
+            
+            container.classList.remove('learning-mode');
+            mainContent.classList.remove('fullscreen');
+            tabContainer.classList.remove('hidden');
+            header.classList.remove('hidden');
+            stats.classList.remove('hidden');
+            trigger.style.display = 'none';
+        }
+
+        // 更新日期显示
+        function updateDate() {
+            const date = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = date.toLocaleDateString('zh-CN', options);
+        }
+
+        // 加载数据
+        function loadData() {
+            const saved = localStorage.getItem('wordMemoryData');
+            if (saved) {
+                wordData = JSON.parse(saved);
+            }
+        }
+
+        // 保存数据
+        function saveData() {
+            localStorage.setItem('wordMemoryData', JSON.stringify(wordData));
+        }
+
+        // 切换标签
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+
+            // 退出学习模式
+            if (tab !== 'learn' && isInLearningMode) {
+                exitLearningMode();
+            }
+
+            if (tab === 'learn') {
+                checkDailyGroup();
+                renderLearnSection();
+            } else if (tab === 'manage') {
+                renderGroupList();
+                updateProgressBar();
+                renderSlashedWords();
+            }
+        }
+
+        // 文件上传处理
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    processExcelData(jsonData);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        // 处理Excel数据
+        function processExcelData(data) {
+            const words = [];
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (row[0]) {
+                    words.push({
+                        word: row[0],
+                        phonetic: row[1] || '',
+                        meaning: row[2] || '',
+                        mastered: false
+                    });
+                }
+            }
+            
+            window.uploadedWords = words;
+            showToast(`已读取 ${words.length} 个单词`);
+        }
+
+        // 处理上传并分组
+        function processUpload() {
+            if (!window.uploadedWords || window.uploadedWords.length === 0) {
+                showToast('请先上传Excel文件');
+                return;
+            }
+
+            const groupSize = parseInt(document.getElementById('groupSize').value);
+            const words = window.uploadedWords;
+            const groups = [];
+
+            for (let i = 0; i < words.length; i += groupSize) {
+                const groupWords = words.slice(i, i + groupSize);
+                const groupId = Date.now() + i;
+                groups.push({
+                    id: groupId,
+                    name: `第${wordData.groups.length + groups.length + 1}组`,
+                    words: groupWords,
+                    createdDate: new Date().toISOString(),
+                    schedules: generateSchedules(),
+                    currentRound: 1 // 当前轮次
+                });
+            }
+
+            wordData.groups = wordData.groups.concat(groups);
+            saveData();
+            updateStats();
+            showToast(`成功创建 ${groups.length} 个单词组`);
+            
+            window.uploadedWords = null;
+            document.getElementById('fileInput').value = '';
+        }
+
+        // 生成复习计划
+        function generateSchedules() {
+            const today = new Date();
+            const schedules = [];
+            const days = [0, 1, 3, 6, 13]; // 第1天、第2天、第4天、第7天、第14天
+
+            days.forEach((day, index) => {
+                const date = new Date(today);
+                date.setDate(date.getDate() + day);
+                schedules.push({
+                    date: date.toISOString().split('T')[0],
+                    completed: false,
+                    round: index + 1 // 第几轮复习
+                });
+            });
+
+            return schedules;
+        }
+
+        // 检查今日学习组（每天只学一组）
+        function checkDailyGroup() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // 如果日期变了，重置每日组
+            if (wordData.dailyDate !== today) {
+                wordData.dailyDate = today;
+                wordData.dailyGroup = null;
+            }
+            
+            // 如果已经有今日组，继续使用
+            if (wordData.dailyGroup) {
+                const group = wordData.groups.find(g => g.id === wordData.dailyGroup.groupId);
+                if (group) {
+                    currentGroup = {
+                        group: group,
+                        schedule: wordData.dailyGroup.schedule
+                    };
+                    return;
+                }
+            }
+            
+            // 查找今天需要学习的组（只取第一个）
+            for (let group of wordData.groups) {
+                for (let schedule of group.schedules) {
+                    if (schedule.date === today && !schedule.completed) {
+                        currentGroup = {
+                            group: group,
+                            schedule: schedule
+                        };
+                        wordData.dailyGroup = {
+                            groupId: group.id,
+                            schedule: schedule
+                        };
+                        saveData();
+                        return;
+                    }
+                }
+            }
+            
+            currentGroup = null;
+        }
+
+        // 渲染学习界面
+        function renderLearnSection() {
+            const content = document.getElementById('learnContent');
+            
+            if (!currentGroup) {
+                exitLearningMode();
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🎉</div>
+                        <p>今天没有需要学习的单词</p>
+                        <p style="font-size: 14px; color: #999; margin-top: 10px;">
+                            可以上传新的单词开始学习
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const group = currentGroup.group;
+            const words = group.words.filter(w => !w.mastered && !isWordSlashed(w));
+            
+            if (words.length === 0) {
+                // 当前组已完成，显示成就页面
+                currentGroup.schedule.completed = true;
+                group.currentRound = (group.currentRound || 1) + 1;
+                wordData.dailyGroup = null; // 清除今日组
+                saveData();
+                showAchievement(group);
+                return;
+            }
+
+            if (currentWordIndex >= words.length) {
+                currentWordIndex = 0;
+            }
+
+            const word = words[currentWordIndex];
+            
+            // 进入学习模式
+            if (!isInLearningMode) {
+                enterLearningMode();
+            }
+            
+            content.innerHTML = `
+                <div class="learn-container">
+                    <div class="word-card" onclick="toggleMeaning()">
+                        <button class="slash-btn" onclick="slashWord('${word.word}'); event.stopPropagation();" title="永久斩掉">
+                            ⚔️
+                        </button>
+                        <button class="audio-btn" onclick="playAudio('${word.word}'); event.stopPropagation();">
+                            🔊
+                        </button>
+                        <div class="word">${word.word}</div>
+                        <div class="phonetic">${word.phonetic}</div>
+                        <div class="meaning hidden" id="wordMeaning">${word.meaning}</div>
+                        <div class="card-progress">
+                            ${currentWordIndex + 1} / ${words.length}
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="action-btn btn-familiar" onclick="markAsFamiliar()">
+                            ✓ 熟悉
+                        </button>
+                        <button class="action-btn btn-unfamiliar" onclick="markAsUnfamiliar()">
+                            ✗ 不熟悉
+                        </button>
+                    </div>
+                    ${wordData.lastUndone ? `
+                        <button class="action-btn btn-undo" style="width: 100%; margin-top: 10px;" onclick="undoLastAction()">
+                            ↶ 撤销上次操作
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+            
+            // 自动播放发音
+            setTimeout(() => {
+                playAudio(word.word);
+            }, 300);
+        }
+
+        // 显示成就页面
+        function showAchievement(group) {
+            const round = currentGroup.schedule.round || 1;
+            const groupNumber = parseInt(group.name.match(/\d+/)[0]);
+            
+            const achievementHtml = `
+                <div class="achievement-container">
+                    <div class="achievement-card">
+                        <div class="achievement-icon">🏆</div>
+                        <div class="achievement-title">太棒了！</div>
+                        <div class="achievement-desc">
+                            又勤奋又聪明的你<br>
+                            完成了第${groupNumber}组的第${round}次复习！
+                        </div>
+                        <button class="achievement-btn" onclick="closeAchievement()">
+                            继续加油
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', achievementHtml);
+            playSound('familiar');
+        }
+
+        // 关闭成就页面
+        function closeAchievement() {
+            const achievement = document.querySelector('.achievement-container');
+            if (achievement) {
+                achievement.remove();
+            }
+            exitLearningMode();
+            currentGroup = null;
+            currentWordIndex = 0;
+            checkDailyGroup();
+            renderLearnSection();
+            updateStats();
+        }
+
+        // 判断单词是否被斩掉
+        function isWordSlashed(word) {
+            return wordData.slashedWords.some(w => w.word === word.word);
+        }
+
+        // 斩掉单词
+        function slashWord(wordText) {
+            const group = currentGroup.group;
+            const word = group.words.find(w => w.word === wordText);
+            
+            if (word) {
+                // 添加到斩掉列表
+                if (!wordData.slashedWords) {
+                    wordData.slashedWords = [];
+                }
+                wordData.slashedWords.push({
+                    word: word.word,
+                    phonetic: word.phonetic,
+                    meaning: word.meaning,
+                    slashedDate: new Date().toISOString()
+                });
+                
+                playSound('slash');
+                saveData();
+                updateStats();
+                showToast('已永久斩掉该单词');
+                
+                // 移到下一个单词
+                nextWord();
+            }
+        }
+
+        // 切换释义显示
+        function toggleMeaning() {
+            const meaning = document.getElementById('wordMeaning');
+            if (meaning) {
+                meaning.classList.toggle('hidden');
+            }
+        }
+
+        // 播放发音
+        function playAudio(word) {
+            // 使用Web Speech API
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.8;
+            speechSynthesis.speak(utterance);
+        }
+
+        // 标记为熟悉
+        function markAsFamiliar() {
+            const group = currentGroup.group;
+            const words = group.words.filter(w => !w.mastered && !isWordSlashed(w));
+            const word = words[currentWordIndex];
+            
+            // 保存撤销信息
+            wordData.lastUndone = {
+                type: 'familiar',
+                word: word,
+                groupId: group.id,
+                wordIndex: currentWordIndex // 保存位置
+            };
+            
+            word.mastered = true;
+            playSound('familiar');
+            saveData();
+            updateStats();
+            
+            showToast('已标记为熟悉');
+            nextWord();
+        }
+
+        // 标记为不熟悉
+        function markAsUnfamiliar() {
+            wordData.lastUndone = null; // 清除撤销信息
+            playSound('unfamiliar');
+            showToast('继续加油！');
+            nextWord();
+        }
+
+        // 下一个单词
+        function nextWord() {
+            const group = currentGroup.group;
+            const words = group.words.filter(w => !w.mastered && !isWordSlashed(w));
+            
+            if (currentWordIndex < words.length - 1) {
+                currentWordIndex++;
+            } else {
+                currentWordIndex = 0;
+            }
+            
+            renderLearnSection();
+        }
+
+        // 撤销上次操作
+        function undoLastAction() {
+            if (wordData.lastUndone && wordData.lastUndone.type === 'familiar') {
+                const group = wordData.groups.find(g => g.id === wordData.lastUndone.groupId);
+                if (group) {
+                    const word = group.words.find(w => w.word === wordData.lastUndone.word.word);
+                    if (word) {
+                        word.mastered = false;
+                        currentWordIndex = wordData.lastUndone.wordIndex; // 恢复到撤销的位置
+                        wordData.lastUndone = null;
+                        saveData();
+                        updateStats();
+                        renderLearnSection();
+                        showToast('已撤销');
+                    }
+                }
+            }
+        }
+
+        // 更新统计
+        function updateStats() {
+            let total = 0;
+            let mastered = 0;
+            
+            wordData.groups.forEach(group => {
+                group.words.forEach(word => {
+                    if (!isWordSlashed(word)) {
+                        total++;
+                        if (word.mastered) {
+                            mastered++;
+                        }
+                    }
+                });
+            });
+            
+            document.getElementById('totalWords').textContent = total;
+            document.getElementById('masteredWords').textContent = mastered;
+            
+            // 计算今日待学
+            let todayCount = 0;
+            if (currentGroup) {
+                const words = currentGroup.group.words.filter(w => !w.mastered && !isWordSlashed(w));
+                todayCount = words.length;
+            }
+            document.getElementById('todayWords').textContent = todayCount;
+        }
+
+        // 渲染分组列表
+        function renderGroupList() {
+            const list = document.getElementById('groupList');
+            
+            if (wordData.groups.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无单词组</div>';
+                return;
+            }
+            
+            list.innerHTML = wordData.groups.map(group => {
+                const totalWords = group.words.filter(w => !isWordSlashed(w)).length;
+                const masteredWords = group.words.filter(w => w.mastered && !isWordSlashed(w)).length;
+                const nextSchedule = group.schedules.find(s => !s.completed);
+                const currentRound = group.currentRound || 1;
+                
+                return `
+                    <div class="group-item">
+                        <div class="group-info">
+                            <div class="group-name">${group.name}</div>
+                            <div class="group-meta">
+                                ${totalWords} 个单词 · ${masteredWords} 已掌握 · 第${currentRound}轮
+                                ${nextSchedule ? ` · 下次复习: ${nextSchedule.date}` : ' · 已完成'}
+                            </div>
+                        </div>
+                        ${masteredWords === totalWords && totalWords > 0 ? 
+                            '<div class="group-badge" style="background: #48bb78;">已掌握</div>' : 
+                            '<div class="group-badge">学习中</div>'
+                        }
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 渲染被斩掉的单词
+        function renderSlashedWords() {
+            const container = document.getElementById('slashedWords');
+            
+            if (!wordData.slashedWords || wordData.slashedWords.length === 0) {
+                container.innerHTML = '暂无被斩掉的单词';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div style="color: #666;">
+                    共 ${wordData.slashedWords.length} 个被斩掉的单词
+                </div>
+                <div style="margin-top: 10px; max-height: 200px; overflow-y: auto;">
+                    ${wordData.slashedWords.map(w => `
+                        <div style="padding: 8px; background: #f0f0f0; margin-top: 5px; border-radius: 5px;">
+                            <strong>${w.word}</strong> ${w.phonetic} - ${w.meaning}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 更新进度条
+        function updateProgressBar() {
+            let total = 0;
+            let mastered = 0;
+            
+            wordData.groups.forEach(group => {
+                group.words.forEach(word => {
+                    if (!isWordSlashed(word)) {
+                        total++;
+                        if (word.mastered) {
+                            mastered++;
+                        }
+                    }
+                });
+            });
+            
+            const percentage = total > 0 ? (mastered / total * 100) : 0;
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = `${mastered} / ${total} 已掌握`;
+        }
+
+        // 清除所有数据
+        function clearAllData() {
+            if (confirm('确定要清除所有数据吗？此操作不可恢复。')) {
+                localStorage.removeItem('wordMemoryData');
+                wordData = {
+                    groups: [],
+                    progress: {},
+                    lastUndone: null,
+                    slashedWords: [],
+                    settings: {
+                        groupSize: 20
+                    },
+                    dailyGroup: null,
+                    dailyDate: null
+                };
+                currentGroup = null;
+                currentWordIndex = 0;
+                exitLearningMode();
+                updateStats();
+                renderLearnSection();
+                renderGroupList();
+                showToast('已清除所有数据');
+            }
+        }
+
+        // 显示提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
